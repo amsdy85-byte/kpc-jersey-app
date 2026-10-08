@@ -1,30 +1,23 @@
-# KPC Jersey Order — MVP Production Setup
+# KPC Jersey Order App — No Vercel Environment Variables
 
-## Flow
+## Setup
+1. Create a Supabase project.
+2. In Supabase SQL Editor, run `schema.sql`.
+3. Create an admin user in Supabase Authentication > Users.
+4. Open `config.js` and replace only:
+   - `SUPABASE_URL`
+   - `SUPABASE_PUBLISHABLE_KEY`
+   - bank details / price if needed
+5. Upload the whole folder to GitHub.
+6. Import the GitHub repo into Vercel. No Environment Variables are required.
+
+## Security
+The browser uses only the Supabase publishable/anon key. NEVER put a `service_role` key in `config.js`.
+RLS policies in `schema.sql` allow public order creation but restrict order reads/updates to authenticated users.
+For a stricter production admin policy, add an admin-role table or restrict authenticated users by email/domain.
+
+## Customer flow
 Home → Product → Customer → Jersey details → Review → Transfer → Done.
 
-Admin: login → Orders → verify transfer manually → Mark as Paid.
-
-## 1. Create Supabase project
-Create a project, open SQL Editor, and run `schema.sql`.
-
-## 2. Configure the website
-Copy `config.example.js` to `config.js` and enter your Supabase Project URL and anon key.
-
-Change the bank details and jersey price there.
-
-## 3. Connect Supabase JS
-In `index.html`, add the Supabase JS CDN and replace the localStorage functions with the Supabase functions described in the implementation notes below.
-
-## 4. Admin
-Create an admin user in Supabase Authentication. For the first MVP, the admin dashboard should require email/password login before reading or changing orders.
-
-## 5. Deploy
-Upload the folder to Vercel, Netlify, Cloudflare Pages, or any static hosting. No server is required for the customer-facing page.
-
-## Important before launch
-- Replace the demo jersey image with the real jersey photo.
-- Replace the demo size guide with the actual measured size chart.
-- Replace demo bank account details.
-- Add proper admin-only RLS before accepting real orders.
-- Test order creation on mobile.
+## Admin
+Open `/#admin`, log in with the Supabase Auth user, then verify transfer and click Mark as Paid.
