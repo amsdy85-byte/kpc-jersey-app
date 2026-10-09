@@ -1256,10 +1256,14 @@ async function submitOrder(){
 
     try{
 
+      // Buat UUID sendiri di browser
+      const dbOrderId = crypto.randomUUID();
+
       // Simpan order utama
       const { error: orderError } = await sb
         .from('orders')
         .insert({
+          id: dbOrderId,
           order_code: order.id,
           customer_name: order.name,
           customer_phone: order.phone,
@@ -1272,29 +1276,14 @@ async function submitOrder(){
         throw orderError;
       }
 
-
-      // Cari ID order berdasarkan order_code
-      // Jika kolom id dibuat otomatis oleh Supabase,
-      // kita ambil ID-nya untuk order_items.
-      const { data: created, error: findError } = await sb
-        .from('orders')
-        .select('id')
-        .eq('order_code', order.id)
-        .single();
-
-      if(findError){
-        throw findError;
-      }
-
-
+      // Simpan detail setiap jersey
       const rows = order.items.map((x,i) => ({
-        order_id: created.id,
+        order_id: dbOrderId,
         item_no: i + 1,
         size: x.size,
         back_name: x.backName,
         back_number: x.number
       }));
-
 
       const { error: itemError } = await sb
         .from('order_items')
@@ -1304,8 +1293,7 @@ async function submitOrder(){
         throw itemError;
       }
 
-
-      order.dbId = created.id;
+      order.dbId = dbOrderId;
 
     }catch(e){
 
