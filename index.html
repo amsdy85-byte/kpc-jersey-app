@@ -1246,115 +1246,97 @@ function review(){
 async function submitOrder(){
 
   order.id = genCode();
+  order.total = order.qty * PRICE;
+  order.status = 'WAITING_FOR_VERIFICATION';
 
-  order.total =
-    order.qty * PRICE;
-
-  order.status =
-    'WAITING_FOR_VERIFICATION';
-
-
-  document
-    .getElementById('payTotal')
-    .textContent =
+  document.getElementById('payTotal').textContent =
     money(order.total);
-
 
   if(dbReady()){
 
     try{
 
-      const {
-        data:created,
-        error
-      } =
-      await sb
+      // Simpan order utama
+      const { error: orderError } = await sb
         .from('orders')
         .insert({
+          order_code: order.id,
+          customer_name: order.name,
+          customer_phone: order.phone,
+          quantity: order.qty,
+          total_amount: order.total,
+          status: order.status
+        });
 
-          order_code:order.id,
-          customer_name:order.name,
-          customer_phone:order.phone,
-          quantity:order.qty,
-          total_amount:order.total,
-          status:order.status
+      if(orderError){
+        throw orderError;
+      }
 
-        })
-        .select()
+
+      // Cari ID order berdasarkan order_code
+      // Jika kolom id dibuat otomatis oleh Supabase,
+      // kita ambil ID-nya untuk order_items.
+      const { data: created, error: findError } = await sb
+        .from('orders')
+        .select('id')
+        .eq('order_code', order.id)
         .single();
 
-
-      if(error)
-        throw error;
-
-
-      const rows =
-        order.items.map(
-          (x,i) => ({
-
-            order_id:created.id,
-            item_no:i+1,
-            size:x.size,
-            back_name:x.backName,
-            back_number:x.number
-
-          })
-        );
+      if(findError){
+        throw findError;
+      }
 
 
-      const {error:e2} =
-        await sb
-          .from('order_items')
-          .insert(rows);
+      const rows = order.items.map((x,i) => ({
+        order_id: created.id,
+        item_no: i + 1,
+        size: x.size,
+        back_name: x.backName,
+        back_number: x.number
+      }));
 
 
-      if(e2)
-        throw e2;
+      const { error: itemError } = await sb
+        .from('order_items')
+        .insert(rows);
+
+      if(itemError){
+        throw itemError;
+      }
 
 
-      order.dbId =
-        created.id;
-
+      order.dbId = created.id;
 
     }catch(e){
 
-      console.error(e);
+      console.error('SUPABASE ERROR:', e);
 
       alert(
-        'Order gagal disimpan ke database. ' +
-        'Cek konfigurasi Supabase.'
+        'Order gagal disimpan.\n\n' +
+        'Error: ' +
+        (e.message || 'Unknown error')
       );
 
       return;
-
     }
 
   }else{
 
     const data =
       JSON.parse(
-        localStorage.getItem(
-          'kpcOrders'
-        ) || '[]'
+        localStorage.getItem('kpcOrders') || '[]'
       );
 
-
     data.unshift(order);
-
 
     localStorage.setItem(
       'kpcOrders',
       JSON.stringify(data)
     );
-
   }
 
-
   go('payment');
-
 }
-
-
 function finish(){
 
   document
